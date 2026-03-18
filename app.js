@@ -9,8 +9,9 @@ app.get('/', (req, res) => {
 app.get('/check', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Jenkinsfile pipeline is working! part 2', 
-    timestamp: new Date()
+    message: 'Phase 3 complete — Auto deployed via Jenkins CD!',
+    deployed_at: new Date(),
+    pipeline: 'Jenkinsfile → SSH → EC2 → pm2'
   });
 });
 app.listen(PORT, () => {
