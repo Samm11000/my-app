@@ -1,0 +1,1115 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+<title>DevOps Architecture — Samm11000/my-app</title>
+<style>
+@import url('https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;700&family=Inter:wght@300;400;500;600;700&display=swap');
+
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box;}
+
+:root {
+  --bg:       #070b14;
+  --bg2:      #0d1220;
+  --bg3:      #111827;
+  --border:   rgba(255,255,255,0.07);
+  --orange:   #ff9900;
+  --blue:     #4a9eff;
+  --green:    #22c55e;
+  --purple:   #a78bfa;
+  --teal:     #2dd4bf;
+  --pink:     #f472b6;
+  --red:      #ef4444;
+  --yellow:   #facc15;
+  --gray:     #94a3b8;
+  --white:    #f1f5f9;
+}
+
+html { scroll-behavior: smooth; }
+
+body {
+  background: var(--bg);
+  font-family: 'Inter', sans-serif;
+  color: var(--white);
+  min-height: 100vh;
+  overflow-x: hidden;
+}
+
+/* ── HEADER ── */
+.header {
+  text-align: center;
+  padding: 48px 24px 32px;
+  position: relative;
+}
+.header::after {
+  content: '';
+  position: absolute;
+  bottom: 0; left: 50%;
+  transform: translateX(-50%);
+  width: 600px; height: 1px;
+  background: linear-gradient(90deg, transparent, var(--border), transparent);
+}
+.repo-tag {
+  display: inline-flex; align-items: center; gap: 8px;
+  background: rgba(255,255,255,0.05);
+  border: 1px solid var(--border);
+  border-radius: 99px;
+  padding: 6px 16px;
+  font-size: 12px; font-weight: 500;
+  color: var(--gray);
+  font-family: 'JetBrains Mono', monospace;
+  margin-bottom: 20px;
+  letter-spacing: 0.02em;
+}
+.repo-tag span { color: var(--green); }
+h1 {
+  font-size: clamp(28px, 4vw, 42px);
+  font-weight: 700;
+  letter-spacing: -0.03em;
+  background: linear-gradient(135deg, #fff 30%, #94a3b8);
+  -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+  background-clip: text;
+  margin-bottom: 10px;
+}
+.tagline {
+  font-size: 14px; color: var(--gray); font-weight: 400;
+  letter-spacing: 0.01em;
+}
+
+/* ── CONTROLS ── */
+.controls {
+  display: flex; align-items: center; justify-content: center;
+  gap: 12px; padding: 28px 24px;
+  flex-wrap: wrap;
+}
+.btn {
+  display: inline-flex; align-items: center; gap: 8px;
+  padding: 10px 22px; border-radius: 8px;
+  font-size: 13px; font-weight: 600;
+  cursor: pointer; border: none;
+  font-family: 'Inter', sans-serif;
+  transition: transform 0.15s, opacity 0.15s;
+  letter-spacing: 0.02em;
+}
+.btn:hover { transform: translateY(-1px); }
+.btn:active { transform: scale(0.97); }
+.btn-play {
+  background: var(--green); color: #000;
+}
+.btn-reset {
+  background: rgba(255,255,255,0.08);
+  border: 1px solid var(--border);
+  color: var(--white);
+}
+.btn-step {
+  background: rgba(74,158,255,0.15);
+  border: 1px solid rgba(74,158,255,0.3);
+  color: var(--blue);
+}
+.speed-wrap {
+  display: flex; align-items: center; gap: 10px;
+  font-size: 12px; color: var(--gray);
+}
+.speed-wrap input[type=range] {
+  width: 90px; accent-color: var(--orange);
+}
+
+/* ── PROGRESS BAR ── */
+.progress-bar {
+  max-width: 900px; margin: 0 auto 32px;
+  padding: 0 24px;
+}
+.progress-track {
+  height: 3px; background: rgba(255,255,255,0.08);
+  border-radius: 99px; overflow: hidden;
+}
+.progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--green), var(--blue));
+  border-radius: 99px;
+  width: 0%; transition: width 0.4s ease;
+}
+.step-label {
+  text-align: center; margin-top: 10px;
+  font-size: 12px; color: var(--gray);
+  font-family: 'JetBrains Mono', monospace;
+  min-height: 18px;
+  transition: color 0.3s;
+}
+
+/* ── DIAGRAM CANVAS ── */
+.diagram {
+  max-width: 1200px; margin: 0 auto;
+  padding: 0 24px 60px;
+  display: flex; flex-direction: column; gap: 0;
+}
+
+/* ── LANES ── */
+.lane {
+  display: flex; align-items: stretch;
+  border-bottom: 1px solid var(--border);
+  min-height: 120px;
+}
+.lane:last-child { border-bottom: none; }
+
+.lane-label {
+  width: 110px; min-width: 110px;
+  display: flex; align-items: center; justify-content: flex-end;
+  padding-right: 18px;
+  font-size: 9px; font-weight: 700;
+  letter-spacing: 0.14em; text-transform: uppercase;
+  color: rgba(255,255,255,0.18);
+  border-right: 1px solid var(--border);
+}
+
+.lane-content {
+  flex: 1; display: flex; align-items: center;
+  padding: 20px 28px; gap: 0; flex-wrap: wrap;
+}
+
+/* ── NODE ── */
+.node {
+  display: flex; flex-direction: column;
+  align-items: center; gap: 8px;
+  opacity: 0; transform: scale(0.8) translateY(10px);
+  transition: opacity 0.45s cubic-bezier(.34,1.56,.64,1),
+              transform 0.45s cubic-bezier(.34,1.56,.64,1),
+              filter 0.3s;
+  position: relative; flex-shrink: 0;
+}
+.node.active {
+  opacity: 1; transform: scale(1) translateY(0);
+}
+.node.dimmed {
+  opacity: 0.25; filter: saturate(0.2);
+}
+
+.icon-wrap {
+  width: 68px; height: 68px;
+  border-radius: 16px;
+  display: flex; align-items: center; justify-content: center;
+  position: relative;
+  border: 1.5px solid transparent;
+  transition: box-shadow 0.4s, border-color 0.4s;
+  flex-shrink: 0;
+}
+.icon-wrap svg { width: 34px; height: 34px; }
+.icon-wrap .emoji { font-size: 30px; line-height: 1; }
+
+.node.active .icon-wrap.pulse {
+  animation: nodePulse 2s ease infinite;
+}
+@keyframes nodePulse {
+  0%,100% { box-shadow: 0 0 0 0 var(--glow-color, rgba(255,153,0,0)); }
+  50%      { box-shadow: 0 0 0 8px var(--glow-color, rgba(255,153,0,0.15)); }
+}
+
+.node-name {
+  font-size: 11px; font-weight: 700;
+  text-align: center; letter-spacing: 0.03em;
+  max-width: 90px; line-height: 1.3;
+}
+.node-desc {
+  font-size: 9px; text-align: center;
+  opacity: 0.45; max-width: 90px;
+  line-height: 1.5; letter-spacing: 0.02em;
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* colors */
+.ic-orange { background: rgba(255,153,0,0.1);  border-color: rgba(255,153,0,0.25); --glow-color: rgba(255,153,0,0.2); }
+.ic-blue   { background: rgba(74,158,255,0.1); border-color: rgba(74,158,255,0.25); --glow-color: rgba(74,158,255,0.2); }
+.ic-green  { background: rgba(34,197,94,0.1);  border-color: rgba(34,197,94,0.25); --glow-color: rgba(34,197,94,0.2); }
+.ic-teal   { background: rgba(45,212,191,0.1); border-color: rgba(45,212,191,0.25); --glow-color: rgba(45,212,191,0.2); }
+.ic-purple { background: rgba(167,139,250,0.1);border-color: rgba(167,139,250,0.25); --glow-color: rgba(167,139,250,0.2); }
+.ic-pink   { background: rgba(244,114,182,0.1);border-color: rgba(244,114,182,0.25); --glow-color: rgba(244,114,182,0.2); }
+.ic-red    { background: rgba(239,68,68,0.1);  border-color: rgba(239,68,68,0.25); --glow-color: rgba(239,68,68,0.2); }
+.ic-yellow { background: rgba(250,204,21,0.1); border-color: rgba(250,204,21,0.25); --glow-color: rgba(250,204,21,0.2); }
+.ic-gray   { background: rgba(148,163,184,0.1);border-color: rgba(148,163,184,0.25); --glow-color: rgba(148,163,184,0.2); }
+
+.nt-orange { color: #ffb347; }
+.nt-blue   { color: #7ab8ff; }
+.nt-green  { color: #6ee7b7; }
+.nt-teal   { color: #5eead4; }
+.nt-purple { color: #c4b5fd; }
+.nt-pink   { color: #f9a8d4; }
+.nt-red    { color: #fca5a5; }
+.nt-yellow { color: #fde68a; }
+.nt-gray   { color: #cbd5e1; }
+
+/* ── ARROWS ── */
+.arrow {
+  display: flex; align-items: center;
+  padding: 0 4px; flex-shrink: 0;
+  position: relative;
+  opacity: 0;
+  transition: opacity 0.4s ease;
+}
+.arrow.active { opacity: 1; }
+
+.arr-line {
+  height: 2px; width: 44px;
+  position: relative; border-radius: 1px;
+}
+.arr-line::after {
+  content: '';
+  position: absolute; right: -1px; top: -4px;
+  width: 0; height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 8px solid currentColor;
+}
+.arr-label {
+  position: absolute; top: -16px; left: 50%;
+  transform: translateX(-50%);
+  font-size: 9px; letter-spacing: 0.06em;
+  text-transform: uppercase; white-space: nowrap;
+  font-family: 'JetBrains Mono', monospace;
+  opacity: 0.5;
+}
+
+/* animated flow dots on arrows */
+.arr-dot {
+  position: absolute; top: 50%; left: 0;
+  width: 6px; height: 6px; border-radius: 50%;
+  transform: translateY(-50%);
+  animation: flowDot 1.2s linear infinite;
+  opacity: 0;
+}
+.arrow.active .arr-dot { opacity: 1; }
+@keyframes flowDot {
+  0%   { left: 0; opacity: 0; }
+  10%  { opacity: 1; }
+  90%  { opacity: 1; }
+  100% { left: calc(100% - 6px); opacity: 0; }
+}
+
+.ac-orange { background: var(--orange); color: var(--orange); }
+.ac-blue   { background: var(--blue);   color: var(--blue); }
+.ac-green  { background: var(--green);  color: var(--green); }
+.ac-teal   { background: var(--teal);   color: var(--teal); }
+.ac-purple { background: var(--purple); color: var(--purple); }
+.ac-pink   { background: var(--pink);   color: var(--pink); }
+.ac-gray   { background: var(--gray);   color: var(--gray); }
+
+/* ── JENKINS BOX ── */
+.jenkins-box {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(255,153,0,0.04);
+  border: 1px solid rgba(255,153,0,0.18);
+  border-radius: 14px;
+  padding: 14px 18px;
+  position: relative;
+  opacity: 0;
+  transform: scale(0.95);
+  transition: opacity 0.5s ease, transform 0.5s ease;
+}
+.jenkins-box.active { opacity: 1; transform: scale(1); }
+.jenkins-box::before {
+  content: 'JENKINS PIPELINE';
+  position: absolute; top: -8px; left: 14px;
+  background: var(--bg);
+  padding: 0 8px;
+  font-size: 8px; font-weight: 800;
+  letter-spacing: 0.14em;
+  color: rgba(255,153,0,0.5);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.stage {
+  display: flex; flex-direction: column; align-items: center;
+  gap: 5px; opacity: 0; transform: translateX(-6px);
+  transition: opacity 0.35s ease, transform 0.35s ease;
+}
+.stage.active { opacity: 1; transform: translateX(0); }
+
+.stage-pill {
+  background: rgba(255,153,0,0.12);
+  border: 1px solid rgba(255,153,0,0.28);
+  border-radius: 7px;
+  padding: 7px 11px;
+  font-size: 10px; font-weight: 700;
+  color: #ffb347; letter-spacing: 0.04em;
+  white-space: nowrap; text-align: center;
+  line-height: 1.4;
+}
+.stage-check {
+  font-size: 11px; color: var(--green);
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.stage.done .stage-check { opacity: 1; }
+
+.stage-arrow {
+  width: 18px; height: 2px;
+  background: rgba(255,153,0,0.3);
+  position: relative; flex-shrink: 0; margin: 0 3px; align-self: center;
+  opacity: 0; transition: opacity 0.3s ease;
+}
+.stage-arrow.active { opacity: 1; }
+.stage-arrow::after {
+  content: '';
+  position: absolute; right: -1px; top: -4px;
+  width: 0; height: 0;
+  border-top: 5px solid transparent;
+  border-bottom: 5px solid transparent;
+  border-left: 7px solid rgba(255,153,0,0.4);
+}
+
+/* ── ASG BOX ── */
+.asg-box {
+  display: flex; flex-direction: column; gap: 8px;
+  background: rgba(34,197,94,0.04);
+  border: 1px dashed rgba(34,197,94,0.22);
+  border-radius: 14px;
+  padding: 14px 16px;
+  position: relative;
+  opacity: 0; transform: scale(0.95);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.asg-box.active { opacity: 1; transform: scale(1); }
+.asg-box::before {
+  content: 'AUTO SCALING GROUP  ·  min:1  max:3';
+  position: absolute; top: -8px; left: 14px;
+  background: var(--bg);
+  padding: 0 8px;
+  font-size: 8px; font-weight: 800;
+  letter-spacing: 0.1em; color: rgba(34,197,94,0.45);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+.instance-row {
+  display: flex; align-items: center; gap: 10px;
+  background: rgba(34,197,94,0.07);
+  border: 1px solid rgba(34,197,94,0.18);
+  border-radius: 9px; padding: 8px 14px;
+  opacity: 0; transform: translateX(10px);
+  transition: opacity 0.4s ease, transform 0.4s ease;
+}
+.instance-row.active { opacity: 1; transform: translateX(0); }
+.inst-icon { font-size: 18px; }
+.inst-info { display: flex; flex-direction: column; gap: 2px; }
+.inst-name { font-size: 10px; font-weight: 700; color: #6ee7b7; letter-spacing: 0.04em; }
+.inst-meta { font-size: 9px; color: rgba(110,231,183,0.45); font-family: 'JetBrains Mono', monospace; }
+.inst-badge {
+  margin-left: auto;
+  background: rgba(34,197,94,0.15); border: 1px solid rgba(34,197,94,0.3);
+  border-radius: 99px; padding: 2px 8px;
+  font-size: 9px; font-weight: 700; color: var(--green);
+  letter-spacing: 0.06em;
+}
+
+/* ── MONITOR BOX ── */
+.monitor-box {
+  display: flex; align-items: center; gap: 0;
+  background: rgba(244,114,182,0.04);
+  border: 1px dashed rgba(244,114,182,0.2);
+  border-radius: 14px; padding: 14px 18px;
+  position: relative;
+  opacity: 0; transform: scale(0.95);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.monitor-box.active { opacity: 1; transform: scale(1); }
+.monitor-box::before {
+  content: 'MONITORING & ALERTING';
+  position: absolute; top: -8px; left: 14px;
+  background: var(--bg); padding: 0 8px;
+  font-size: 8px; font-weight: 800; letter-spacing: 0.14em;
+  color: rgba(244,114,182,0.45);
+  font-family: 'JetBrains Mono', monospace;
+}
+
+/* ── LOG TERMINAL ── */
+.terminal {
+  max-width: 900px; margin: 0 auto 48px;
+  padding: 0 24px;
+  opacity: 0; transform: translateY(12px);
+  transition: opacity 0.5s, transform 0.5s;
+}
+.terminal.active { opacity: 1; transform: translateY(0); }
+.term-header {
+  background: #1e2130; border-radius: 10px 10px 0 0;
+  padding: 10px 16px; display: flex; align-items: center; gap: 8px;
+  border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+.term-dot { width: 11px; height: 11px; border-radius: 50%; }
+.term-title {
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 11px; color: var(--gray); margin-left: 6px;
+}
+.term-body {
+  background: #0f1219; border-radius: 0 0 10px 10px;
+  padding: 16px 20px; min-height: 110px;
+  font-family: 'JetBrains Mono', monospace;
+  font-size: 12px; line-height: 1.9;
+  color: rgba(255,255,255,0.7);
+}
+.term-line { opacity: 0; transform: translateY(4px); transition: opacity 0.3s, transform 0.3s; }
+.term-line.show { opacity: 1; transform: translateY(0); }
+.t-green { color: var(--green); }
+.t-orange { color: var(--orange); }
+.t-blue { color: var(--blue); }
+.t-gray { color: var(--gray); }
+.t-white { color: #fff; font-weight: 700; }
+.cursor { display: inline-block; width: 8px; height: 14px; background: var(--green); vertical-align: middle; animation: blink 1s step-end infinite; margin-left: 2px; }
+@keyframes blink { 50% { opacity: 0; } }
+
+/* ── STEP DOTS ── */
+.step-dots {
+  display: flex; justify-content: center; gap: 6px;
+  margin-bottom: 20px;
+}
+.step-dot {
+  width: 7px; height: 7px; border-radius: 50%;
+  background: rgba(255,255,255,0.12);
+  transition: background 0.3s, transform 0.3s;
+}
+.step-dot.done { background: var(--green); }
+.step-dot.current { background: var(--orange); transform: scale(1.4); }
+
+</style>
+</head>
+<body>
+
+<!-- HEADER -->
+<div class="header">
+  <div class="repo-tag">
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/></svg>
+    <span>Samm11000</span>/my-app
+  </div>
+  <h1>Production DevOps Architecture</h1>
+  <p class="tagline">Node.js · Jenkins CI/CD · AWS EC2 · ALB · Auto Scaling · Lambda · CloudWatch</p>
+</div>
+
+<!-- CONTROLS -->
+<div class="controls">
+  <button class="btn btn-play" onclick="playAll()" id="playBtn">▶ Play Flow</button>
+  <button class="btn btn-step" onclick="nextStep()" id="stepBtn">→ Next Step</button>
+  <button class="btn btn-reset" onclick="resetAll()">↺ Reset</button>
+  <div class="speed-wrap">
+    <span>Speed</span>
+    <input type="range" id="speedSlider" min="400" max="2000" value="900" step="100">
+    <span id="speedLabel">1x</span>
+  </div>
+</div>
+
+<!-- STEP DOTS -->
+<div class="step-dots" id="stepDots"></div>
+
+<!-- PROGRESS BAR -->
+<div class="progress-bar">
+  <div class="progress-track"><div class="progress-fill" id="progressFill"></div></div>
+  <div class="step-label" id="stepLabel">Press Play to see the deployment flow</div>
+</div>
+
+<!-- DIAGRAM -->
+<div class="diagram">
+
+  <!-- LANE 1: CI/CD -->
+  <div class="lane">
+    <div class="lane-label">CI / CD</div>
+    <div class="lane-content" style="gap:0; flex-wrap:nowrap;">
+
+      <!-- GitHub -->
+      <div class="node" id="n-github">
+        <div class="icon-wrap ic-gray pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#94a3b8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M9 19c-5 1.5-5-2.5-7-3m14 6v-3.87a3.37 3.37 0 0 0-.94-2.61c3.14-.35 6.44-1.54 6.44-7A5.44 5.44 0 0 0 20 4.77 5.07 5.07 0 0 0 19.91 1S18.73.65 16 2.48a13.38 13.38 0 0 0-7 0C6.27.65 5.09 1 5.09 1A5.07 5.07 0 0 0 5 4.77a5.44 5.44 0 0 0-1.5 3.78c0 5.42 3.3 6.61 6.44 7A3.37 3.37 0 0 0 9 18.13V22"/>
+          </svg>
+        </div>
+        <div class="node-name nt-gray">GitHub</div>
+        <div class="node-desc">Samm11000/my-app<br>git push → webhook</div>
+      </div>
+
+      <div class="arrow" id="a-gh-jenkins">
+        <div class="arr-line ac-orange">
+          <div class="arr-dot ac-orange"></div>
+          <span class="arr-label">webhook POST</span>
+        </div>
+      </div>
+
+      <!-- Jenkins box -->
+      <div class="jenkins-box" id="jenkins-box">
+        <!-- Jenkins icon -->
+        <div class="node" id="n-jenkins" style="opacity:1;transform:none;margin-right:14px;">
+          <div class="icon-wrap ic-orange" style="width:56px;height:56px;">
+            <svg viewBox="0 0 128 128" width="32" height="32">
+              <path fill="#ef4444" d="M64 8C33.1 8 8 33.1 8 64s25.1 56 56 56 56-25.1 56-56S94.9 8 64 8z"/>
+              <path fill="#fff" d="M64 20c-24.3 0-44 19.7-44 44s19.7 44 44 44 44-19.7 44-44-19.7-44-44-44zm0 8c19.9 0 36 16.1 36 36S83.9 100 64 100 28 83.9 28 64s16.1-36 36-36z"/>
+              <circle fill="#fff" cx="64" cy="64" r="14"/>
+              <path fill="#D33833" d="M60 50h8v28h-8z"/>
+              <path fill="#D33833" d="M50 60v8h28v-8z"/>
+            </svg>
+          </div>
+          <div class="node-name nt-orange">Jenkins</div>
+          <div class="node-desc">Jenkinsfile<br>Pipeline</div>
+        </div>
+
+        <!-- stages -->
+        <div class="stage" id="st-checkout">
+          <div class="stage-pill">Checkout<br><span style="font-size:8px;opacity:0.6">git pull</span></div>
+          <div class="stage-check">✓</div>
+        </div>
+        <div class="stage-arrow" id="sa1"></div>
+        <div class="stage" id="st-build">
+          <div class="stage-pill">Build<br><span style="font-size:8px;opacity:0.6">npm install</span></div>
+          <div class="stage-check">✓</div>
+        </div>
+        <div class="stage-arrow" id="sa2"></div>
+        <div class="stage" id="st-test">
+          <div class="stage-pill">Test<br><span style="font-size:8px;opacity:0.6">smoke test</span></div>
+          <div class="stage-check">✓</div>
+        </div>
+        <div class="stage-arrow" id="sa3"></div>
+        <div class="stage" id="st-deploy">
+          <div class="stage-pill">Deploy<br><span style="font-size:8px;opacity:0.6">SSH → EC2</span></div>
+          <div class="stage-check">✓</div>
+        </div>
+        <div class="stage-arrow" id="sa4"></div>
+        <div class="stage" id="st-verify">
+          <div class="stage-pill">Verify<br><span style="font-size:8px;opacity:0.6">ALB check</span></div>
+          <div class="stage-check">✓</div>
+        </div>
+      </div>
+
+      <div class="arrow" id="a-jenkins-ec2">
+        <div class="arr-line ac-green">
+          <div class="arr-dot ac-green"></div>
+          <span class="arr-label">SSH deploy</span>
+        </div>
+      </div>
+
+      <!-- EC2 -->
+      <div class="node" id="n-ec2">
+        <div class="icon-wrap ic-orange pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ff9900" stroke-width="1.7" stroke-linecap="round">
+            <rect x="2" y="3" width="20" height="14" rx="2"/>
+            <path d="M8 21h8M12 17v4"/>
+            <circle cx="12" cy="10" r="3"/>
+          </svg>
+        </div>
+        <div class="node-name nt-orange">EC2</div>
+        <div class="node-desc">Ubuntu 22.04<br>54.145.224.135</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LANE 2: WEB SERVER -->
+  <div class="lane">
+    <div class="lane-label">Web Server</div>
+    <div class="lane-content" style="padding-left:150px; gap:0; flex-wrap:nowrap;">
+
+      <div class="node" id="n-nginx">
+        <div class="icon-wrap ic-green pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/>
+          </svg>
+        </div>
+        <div class="node-name nt-green">Nginx</div>
+        <div class="node-desc">Reverse Proxy<br>:80 → :3000</div>
+      </div>
+
+      <div class="arrow" id="a-nginx-node">
+        <div class="arr-line ac-green">
+          <div class="arr-dot ac-green"></div>
+          <span class="arr-label">proxy_pass</span>
+        </div>
+      </div>
+
+      <div class="node" id="n-node">
+        <div class="icon-wrap ic-green pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#22c55e" stroke-width="1.7" stroke-linecap="round">
+            <polygon points="12 2 22 8.5 22 15.5 12 22 2 15.5 2 8.5 12 2"/>
+            <line x1="12" y1="22" x2="12" y2="15.5"/>
+            <polyline points="22 8.5 12 15.5 2 8.5"/>
+          </svg>
+        </div>
+        <div class="node-name nt-green">Node.js</div>
+        <div class="node-desc">Express App<br>Apple Clone :3000</div>
+      </div>
+
+      <div class="arrow" id="a-node-pm2">
+        <div class="arr-line ac-teal">
+          <div class="arr-dot ac-teal"></div>
+          <span class="arr-label">managed by</span>
+        </div>
+      </div>
+
+      <div class="node" id="n-pm2">
+        <div class="icon-wrap ic-teal pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#2dd4bf" stroke-width="1.7" stroke-linecap="round">
+            <rect x="3" y="3" width="7" height="7" rx="1"/><rect x="14" y="3" width="7" height="7" rx="1"/>
+            <rect x="3" y="14" width="7" height="7" rx="1"/><rect x="14" y="14" width="7" height="7" rx="1"/>
+          </svg>
+        </div>
+        <div class="node-name nt-teal">PM2</div>
+        <div class="node-desc">Process Mgr<br>Auto-restart</div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LANE 3: AWS INFRA -->
+  <div class="lane" style="min-height:150px;">
+    <div class="lane-label">AWS Infra</div>
+    <div class="lane-content" style="gap:0; flex-wrap:nowrap;">
+
+      <div class="node" id="n-alb">
+        <div class="icon-wrap ic-orange pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ff9900" stroke-width="1.7" stroke-linecap="round">
+            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2z"/>
+            <path d="M2 12h20M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"/>
+          </svg>
+        </div>
+        <div class="node-name nt-orange">ALB</div>
+        <div class="node-desc">App Load Balancer<br>Single Entry Point</div>
+      </div>
+
+      <div class="arrow" id="a-alb-tg">
+        <div class="arr-line ac-orange">
+          <div class="arr-dot ac-orange"></div>
+          <span class="arr-label">forward to</span>
+        </div>
+      </div>
+
+      <div class="node" id="n-tg">
+        <div class="icon-wrap ic-orange pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#ff9900" stroke-width="1.7" stroke-linecap="round">
+            <rect x="2" y="8" width="20" height="8" rx="2"/>
+            <path d="M6 12h2M10 12h2M14 12h2"/>
+          </svg>
+        </div>
+        <div class="node-name nt-orange">Target Group</div>
+        <div class="node-desc">Health checks<br>/check · port 80</div>
+      </div>
+
+      <div class="arrow" id="a-tg-asg">
+        <div class="arr-line ac-green">
+          <div class="arr-dot ac-green"></div>
+          <span class="arr-label">routes to</span>
+        </div>
+      </div>
+
+      <!-- ASG BOX -->
+      <div class="asg-box" id="asg-box">
+        <div class="instance-row" id="inst1">
+          <div class="inst-icon">🖥️</div>
+          <div class="inst-info">
+            <div class="inst-name">EC2 Instance #1</div>
+            <div class="inst-meta">AZ: us-east-1a · ami-v1</div>
+          </div>
+          <div class="inst-badge">HEALTHY</div>
+        </div>
+        <div class="instance-row" id="inst2">
+          <div class="inst-icon">🖥️</div>
+          <div class="inst-info">
+            <div class="inst-name">EC2 Instance #2</div>
+            <div class="inst-meta">AZ: us-east-1b · ami-v1</div>
+          </div>
+          <div class="inst-badge">HEALTHY</div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+
+  <!-- LANE 4: MONITORING -->
+  <div class="lane">
+    <div class="lane-label">Monitoring</div>
+    <div class="lane-content" style="gap:0; flex-wrap:nowrap;">
+
+      <div class="node" id="n-eventbridge">
+        <div class="icon-wrap ic-purple pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#a78bfa" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <circle cx="12" cy="12" r="10"/>
+            <polyline points="12 6 12 12 16 14"/>
+          </svg>
+        </div>
+        <div class="node-name nt-purple">EventBridge</div>
+        <div class="node-desc">Cron Scheduler<br>rate(5 minutes)</div>
+      </div>
+
+      <div class="arrow" id="a-eb-lambda">
+        <div class="arr-line ac-purple">
+          <div class="arr-dot ac-purple"></div>
+          <span class="arr-label">triggers</span>
+        </div>
+      </div>
+
+      <div class="node" id="n-lambda">
+        <div class="icon-wrap ic-yellow pulse">
+          <svg viewBox="0 0 24 24" fill="none" stroke="#facc15" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/>
+          </svg>
+        </div>
+        <div class="node-name nt-yellow">Lambda</div>
+        <div class="node-desc">Health Monitor<br>Node.js 20.x</div>
+      </div>
+
+      <div class="arrow" id="a-lambda-cw">
+        <div class="arr-line ac-pink">
+          <div class="arr-dot ac-pink"></div>
+          <span class="arr-label">logs + alarm</span>
+        </div>
+      </div>
+
+      <div class="monitor-box" id="monitor-box">
+
+        <div class="node" id="n-cloudwatch" style="opacity:1;transform:none;">
+          <div class="icon-wrap ic-pink" style="width:56px;height:56px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#f472b6" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M22 12h-4l-3 9L9 3l-3 9H2"/>
+            </svg>
+          </div>
+          <div class="node-name nt-pink">CloudWatch</div>
+          <div class="node-desc">Logs · Metrics<br>Dashboard · Alarms</div>
+        </div>
+
+        <div class="arrow" id="a-cw-sns" style="opacity:0; transition: opacity 0.4s;">
+          <div class="arr-line ac-pink">
+            <div class="arr-dot ac-pink"></div>
+            <span class="arr-label">on alarm</span>
+          </div>
+        </div>
+
+        <div class="node" id="n-sns" style="opacity:1;transform:none;">
+          <div class="icon-wrap ic-red" style="width:56px;height:56px;">
+            <svg viewBox="0 0 24 24" fill="none" stroke="#ef4444" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>
+          </div>
+          <div class="node-name nt-red">SNS Alert</div>
+          <div class="node-desc">Email on failure<br>samm@email.com</div>
+        </div>
+
+      </div>
+
+    </div>
+  </div>
+
+</div>
+
+<!-- TERMINAL -->
+<div class="terminal" id="terminal">
+  <div class="term-header">
+    <div class="term-dot" style="background:#ef4444;"></div>
+    <div class="term-dot" style="background:#facc15;"></div>
+    <div class="term-dot" style="background:#22c55e;"></div>
+    <span class="term-title">Jenkins Console Output — Samm11000/my-app</span>
+  </div>
+  <div class="term-body" id="termBody">
+    <span class="cursor"></span>
+  </div>
+</div>
+
+<script>
+const STEPS = [
+  {
+    id: 'step-github',
+    label: '① Developer pushes code to GitHub',
+    activate: ['n-github'],
+    log: [
+      { text: '$ git push origin main', cls: 't-green' },
+      { text: 'Enumerating objects: 5, done.', cls: 't-gray' },
+      { text: 'To https://github.com/Samm11000/my-app.git', cls: 't-gray' },
+      { text: '  main → main  ✓', cls: 't-white' },
+    ]
+  },
+  {
+    id: 'step-webhook',
+    label: '② GitHub fires webhook → Jenkins wakes up',
+    activate: ['a-gh-jenkins'],
+    log: [
+      { text: 'Webhook POST → http://54.145.224.135:8080/github-webhook/', cls: 't-orange' },
+      { text: 'Started by GitHub push by Samm11000', cls: 't-white' },
+      { text: 'Obtained Jenkinsfile from git https://github.com/Samm11000/my-app', cls: 't-gray' },
+    ]
+  },
+  {
+    id: 'step-jenkins',
+    label: '③ Jenkins pipeline starts',
+    activate: ['jenkins-box'],
+    log: [
+      { text: '[Pipeline] Start of Pipeline', cls: 't-orange' },
+      { text: '[Pipeline] { (Declarative: Checkout SCM)', cls: 't-gray' },
+    ]
+  },
+  {
+    id: 'step-checkout',
+    label: '④ Stage: Checkout — pull latest code',
+    activate: ['st-checkout'],
+    markDone: ['st-checkout'],
+    activateArrows: ['sa1'],
+    log: [
+      { text: '[Pipeline] stage (Checkout)', cls: 't-orange' },
+      { text: '  Commit: a3f8b2c  Branch: origin/main', cls: 't-gray' },
+      { text: '  Code pulled from GitHub ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-build',
+    label: '⑤ Stage: Build — npm install',
+    activate: ['st-build'],
+    markDone: ['st-build'],
+    activateArrows: ['sa2'],
+    log: [
+      { text: '[Pipeline] stage (Build)', cls: 't-orange' },
+      { text: '  + npm install', cls: 't-gray' },
+      { text: '  added 65 packages in 3.2s', cls: 't-gray' },
+      { text: '  Build complete ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-test',
+    label: '⑥ Stage: Test — smoke test on localhost',
+    activate: ['st-test'],
+    markDone: ['st-test'],
+    activateArrows: ['sa3'],
+    log: [
+      { text: '[Pipeline] stage (Test)', cls: 't-orange' },
+      { text: '  + node app.js &', cls: 't-gray' },
+      { text: '  + curl -f http://localhost:3000/check', cls: 't-gray' },
+      { text: '  {"status":"OK"} — Smoke test passed ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-deploy',
+    label: '⑦ Stage: Deploy — SSH into EC2, git pull, pm2 restart',
+    activate: ['st-deploy', 'a-jenkins-ec2', 'n-ec2'],
+    markDone: ['st-deploy'],
+    activateArrows: ['sa4'],
+    log: [
+      { text: '[Pipeline] stage (Deploy)', cls: 't-orange' },
+      { text: '  [ssh-agent] Using credentials ubuntu (ec2-ssh-key)', cls: 't-gray' },
+      { text: '  + ssh ubuntu@54.145.224.135', cls: 't-blue' },
+      { text: '  Already up to date.  (git pull)', cls: 't-gray' },
+      { text: '  [PM2] Restarting my-app ✓', cls: 't-green' },
+      { text: '  nginx: configuration reloaded ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-nginx',
+    label: '⑧ Nginx reverse proxies traffic from :80 to :3000',
+    activate: ['n-nginx', 'a-nginx-node', 'n-node', 'a-node-pm2', 'n-pm2'],
+    log: [
+      { text: 'Nginx listening on :80', cls: 't-green' },
+      { text: 'proxy_pass → http://localhost:3000', cls: 't-gray' },
+      { text: 'Node.js app running on :3000 via PM2', cls: 't-gray' },
+      { text: 'Port 3000 NOT exposed to internet ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-verify',
+    label: '⑨ Stage: Verify — ALB health check confirmed',
+    activate: ['st-verify', 'n-alb', 'a-alb-tg', 'n-tg'],
+    markDone: ['st-verify'],
+    log: [
+      { text: '[Pipeline] stage (Verify)', cls: 't-orange' },
+      { text: '  + curl -f http://<alb-dns>/check', cls: 't-blue' },
+      { text: '  {"status":"OK","timestamp":"..."}', cls: 't-gray' },
+      { text: '  Post-deploy health check passed ✓', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-asg',
+    label: '⑩ ASG maintains 2 healthy instances across AZs',
+    activate: ['a-tg-asg', 'asg-box', 'inst1', 'inst2'],
+    log: [
+      { text: 'ALB → Target Group → Auto Scaling Group', cls: 't-orange' },
+      { text: 'EC2 #1 (us-east-1a) — HEALTHY ✓', cls: 't-green' },
+      { text: 'EC2 #2 (us-east-1b) — HEALTHY ✓', cls: 't-green' },
+      { text: 'Scaling policy: CPU > 50% → add instance', cls: 't-gray' },
+    ]
+  },
+  {
+    id: 'step-monitoring',
+    label: '⑪ EventBridge triggers Lambda every 5 minutes',
+    activate: ['n-eventbridge', 'a-eb-lambda', 'n-lambda'],
+    log: [
+      { text: 'EventBridge cron: rate(5 minutes)', cls: 't-purple' },
+      { text: 'Lambda: my-app-health-monitor invoked', cls: 't-yellow' },
+      { text: 'GET http://<alb-dns>/check', cls: 't-gray' },
+      { text: 'STATUS: HEALTHY ✅  responseTime: 142ms', cls: 't-green' },
+    ]
+  },
+  {
+    id: 'step-cloudwatch',
+    label: '⑫ CloudWatch logs results — alarm ready on failure',
+    activate: ['a-lambda-cw', 'monitor-box', 'a-cw-sns'],
+    log: [
+      { text: 'CloudWatch Logs: /aws/lambda/my-app-health-monitor', cls: 't-pink' },
+      { text: '  STATUS: HEALTHY ✅  142ms', cls: 't-green' },
+      { text: 'CloudWatch Alarm: my-app-health-check-errors', cls: 't-gray' },
+      { text: 'Alarm state: OK — SNS alert ready on failure 📧', cls: 't-gray' },
+      { text: '', cls: '' },
+      { text: 'Finished: SUCCESS ✓  Total time: ~2 minutes', cls: 't-white' },
+    ]
+  },
+];
+
+let currentStep = -1;
+let playing = false;
+let playTimer = null;
+
+function getDelay() {
+  const v = parseInt(document.getElementById('speedSlider').value);
+  return v;
+}
+
+// Build dots
+const dotsEl = document.getElementById('stepDots');
+STEPS.forEach((_, i) => {
+  const d = document.createElement('div');
+  d.className = 'step-dot';
+  d.id = 'dot-' + i;
+  dotsEl.appendChild(d);
+});
+
+function updateDots() {
+  STEPS.forEach((_, i) => {
+    const d = document.getElementById('dot-' + i);
+    d.className = 'step-dot' + (i < currentStep ? ' done' : i === currentStep ? ' current' : '');
+  });
+}
+
+function activateEl(id) {
+  const el = document.getElementById(id);
+  if (!el) return;
+  el.classList.add('active');
+  el.classList.remove('dimmed');
+}
+
+function appendLog(lines) {
+  const body = document.getElementById('termBody');
+  const cursor = body.querySelector('.cursor');
+  if (cursor) cursor.remove();
+  lines.forEach((l, i) => {
+    setTimeout(() => {
+      const line = document.createElement('div');
+      line.className = 'term-line ' + (l.cls || '');
+      line.textContent = l.text;
+      body.appendChild(line);
+      setTimeout(() => line.classList.add('show'), 20);
+      body.scrollTop = body.scrollHeight;
+    }, i * 120);
+  });
+  setTimeout(() => {
+    const cur = document.createElement('span');
+    cur.className = 'cursor';
+    body.appendChild(cur);
+    body.scrollTop = body.scrollHeight;
+  }, lines.length * 120 + 100);
+}
+
+function runStep(idx) {
+  if (idx >= STEPS.length) {
+    playing = false;
+    document.getElementById('playBtn').textContent = '▶ Play Flow';
+    document.getElementById('stepLabel').textContent = '✅ Full deployment cycle complete!';
+    document.getElementById('stepLabel').style.color = 'var(--green)';
+    return;
+  }
+  currentStep = idx;
+  const step = STEPS[idx];
+
+  // progress
+  document.getElementById('progressFill').style.width = ((idx + 1) / STEPS.length * 100) + '%';
+  document.getElementById('stepLabel').textContent = step.label;
+  document.getElementById('stepLabel').style.color = '';
+
+  // activate elements
+  if (step.activate) step.activate.forEach(activateEl);
+  if (step.activateArrows) step.activateArrows.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) el.classList.add('active');
+  });
+  if (step.markDone) step.markDone.forEach(id => {
+    const el = document.getElementById(id);
+    if (el) { el.classList.add('active'); el.classList.add('done'); }
+  });
+
+  // show terminal
+  const term = document.getElementById('terminal');
+  term.classList.add('active');
+  if (step.log) appendLog(step.log);
+
+  updateDots();
+}
+
+function nextStep() {
+  if (currentStep < STEPS.length - 1) {
+    runStep(currentStep + 1);
+  }
+}
+
+function playAll() {
+  if (playing) {
+    playing = false;
+    clearTimeout(playTimer);
+    document.getElementById('playBtn').textContent = '▶ Play Flow';
+    return;
+  }
+  playing = true;
+  document.getElementById('playBtn').textContent = '⏸ Pause';
+
+  function playNext(idx) {
+    if (!playing || idx >= STEPS.length) {
+      playing = false;
+      document.getElementById('playBtn').textContent = '▶ Play Flow';
+      return;
+    }
+    runStep(idx);
+    playTimer = setTimeout(() => playNext(idx + 1), getDelay());
+  }
+  playNext(currentStep + 1);
+}
+
+function resetAll() {
+  playing = false;
+  clearTimeout(playTimer);
+  currentStep = -1;
+  document.getElementById('playBtn').textContent = '▶ Play Flow';
+  document.getElementById('progressFill').style.width = '0%';
+  document.getElementById('stepLabel').textContent = 'Press Play to see the deployment flow';
+  document.getElementById('stepLabel').style.color = '';
+  document.getElementById('termBody').innerHTML = '<span class="cursor"></span>';
+  document.getElementById('terminal').classList.remove('active');
+
+  // reset all nodes and arrows
+  document.querySelectorAll('.node, .arrow, .jenkins-box, .asg-box, .monitor-box').forEach(el => {
+    el.classList.remove('active', 'dimmed');
+  });
+  document.querySelectorAll('.stage').forEach(el => {
+    el.classList.remove('active', 'done');
+  });
+  document.querySelectorAll('.stage-arrow').forEach(el => {
+    el.classList.remove('active');
+  });
+  document.querySelectorAll('.instance-row').forEach(el => {
+    el.classList.remove('active');
+  });
+  const cwSns = document.getElementById('a-cw-sns');
+  if (cwSns) cwSns.style.opacity = '0';
+
+  updateDots();
+}
+
+// Speed label
+document.getElementById('speedSlider').addEventListener('input', function() {
+  const v = parseInt(this.value);
+  const x = (2000 - v) / (2000 - 400);
+  document.getElementById('speedLabel').textContent = (0.5 + x * 1.5).toFixed(1) + 'x';
+});
+
+// Fix monitor-box internal nodes — always show
+window.addEventListener('load', () => {
+  ['n-cloudwatch','n-sns'].forEach(id => {
+    const el = document.getElementById(id);
+    if(el){ el.style.opacity='1'; el.style.transform='none'; }
+  });
+});
+</script>
+</body>
+</html>
