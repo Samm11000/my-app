@@ -9,7 +9,7 @@ app.get('/', (req, res) => {
 app.get('/check', (req, res) => {
   res.json({
     status: 'OK',
-    message: 'Jenkinsfile pipeline is working!', 
+    message: 'Jenkinsfile pipeline is working! part 2', 
     timestamp: new Date()
   });
 });
