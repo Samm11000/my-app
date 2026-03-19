@@ -12,6 +12,9 @@
 
 > **A full production-grade DevOps system** — from a single `git push` to auto-scaled, load-balanced, monitored deployment on AWS. No deployment link — this project is about the infrastructure.
 
+### 📐 Live Architecture Diagram
+[View Here](https://samm11000.github.io/jenkins-ec2-alb-pipeline/)
+
 </div>
 
 ---
